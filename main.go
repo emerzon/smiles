@@ -19,11 +19,12 @@ import (
 
 // input parameters
 var (
-	departureDateStr       = "2022-09-10" // primer día para la ida
-	returnDateStr          = "2022-09-20" // primer día para la vuelta
-	originAirportCode      = "EZE"        // aeropuerto de origen
-	destinationAirportCode = "PUJ"        // aeropuerto de destino
+	departureDateStr       = "2023-03-10" // primer día para la ida
+	returnDateStr          = "2023-03-20" // primer día para la vuelta
+	originAirportCode      = "GRU"        // aeropuerto de origen
+	destinationAirportCode = "MIA"        // aeropuerto de destino
 	daysToQuery            = 1            // días corridos para buscar ida y vuelta
+	cabinType              = "ECONOMY"    // clase de cabina
 )
 
 const (
@@ -39,9 +40,9 @@ const (
 func main() {
 
 	if useCommandLineArguments {
-		if len(os.Args) != 6 {
-			fmt.Println("Forma de Uso: Origen Destino Fecha Ida Fecha Vuelta Cantidad de días a consultar")
-			fmt.Println("Ejemplo: smiles BUE PUJ 2023-01-10 2023-01-20 5")
+		if len(os.Args) != 7 {
+			fmt.Println("Forma de Uso: Origem Destino Data_de_Ida Data_de_Volta Quantidade_de_Dias Cabine")
+			fmt.Println("Exemplo: smiles GRU MIA 2023-01-10 2023-01-20 5 BUSINESS")
 			os.Exit(1)
 		}
 
@@ -56,16 +57,16 @@ func main() {
 		log.Fatal("Error parsing starting date")
 	}
 
-	fmt.Printf("Primer día de búsqueda para la ida: %s\n", departureDateStr)
-	fmt.Printf("Primer día de búsqueda para la vuelta: %s\n", returnDateStr)
-	fmt.Printf("Desde: %s\n", originAirportCode)
-	fmt.Printf("Hasta: %s\n", destinationAirportCode)
+	fmt.Printf("Primeira data de busca para a ida: %s\n", departureDateStr)
+	fmt.Printf("Primeira data de busca para a volta: %s\n", returnDateStr)
+	fmt.Printf("A partir de: %s\n", originAirportCode)
+	fmt.Printf("Até: %s\n", destinationAirportCode)
 
 	departuresCh := make(chan model.Result, daysToQuery)
 	returnsCh := make(chan model.Result, daysToQuery)
 
 	bar := progressbar.NewOptions(daysToQuery*2,
-		progressbar.OptionSetDescription("Consultando vuelos en las fechas y tramos seleccionados.."),
+		progressbar.OptionSetDescription("Consultando vôos nas datas e trechos selecionados.."),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionSetRenderBlankState(true),
 	)
@@ -88,7 +89,7 @@ func main() {
 	close(returnsCh)
 
 	elapsed := time.Since(start).Round(time.Second).String()
-	fmt.Printf("\nLas consultas tomaron %s\n", elapsed)
+	fmt.Printf("\nAs consultas levaram %s\n", elapsed)
 
 	var departureResults []model.Result
 	var returnResults []model.Result
@@ -104,10 +105,10 @@ func main() {
 	sortResults(departureResults)
 	sortResults(returnResults)
 
-	fmt.Println("VUELOS DE IDA")
+	fmt.Println("VÔOS DE IDA")
 	processResults(&c, departureResults)
 
-	fmt.Println("VUELOS DE VUELTA")
+	fmt.Println("VÔOS DE VOLTA")
 	processResults(&c, returnResults)
 }
 
@@ -128,7 +129,7 @@ func makeRequest(wg *sync.WaitGroup, ch chan<- model.Result, c *http.Client, sta
 	u := createURL(startingDate.Format(dateLayout), originAirport, destinationAirport) // Encode and assign back to the original query.
 	req := createRequest(u, "api-air-flightsearch-prd.smiles.com.br")
 
-	//fmt.Println("Making request with URL: ", req.URL.String())
+	fmt.Println("Making request with URL: ", req.URL.String())
 	//fmt.Printf("Consultando %s - %s para el día %s \n", originAirport, destinationAirport, startingDate.Format(dateLayout))
 
 	// only for dev purposes
@@ -165,9 +166,9 @@ func createRequest(u url.URL, authority string) *http.Request {
 
 	// headers
 	req.Header.Add("x-api-key", "aJqPU7xNHl9qN3NVZnPaJ208aPo2Bh2p2ZV844tw")
-	req.Header.Add("region", "ARGENTINA")
-	req.Header.Add("origin", "https://www.smiles.com.ar")
-	req.Header.Add("referer", "https://www.smiles.com.ar")
+	req.Header.Add("region", "BRASIL")
+	req.Header.Add("origin", "https://www.smiles.com.br")
+	req.Header.Add("referer", "https://www.smiles.com.br")
 	req.Header.Add("channel", "web")
 	req.Header.Add("authority", authority)
 	return req
@@ -177,11 +178,12 @@ func createURL(departureDate string, originAirport string, destinationAirport st
 	u := url.URL{
 		Scheme:   "https",
 		Host:     "api-air-flightsearch-prd.smiles.com.br",
-		RawQuery: "adults=1&cabinType=all&children=0&currencyCode=ARS&infants=0&isFlexibleDateChecked=false&tripType=2&forceCongener=true&r=ar",
+		RawQuery: "adults=1&children=0&currencyCode=BRL&infants=0&isFlexibleDateChecked=false&tripType=2&forceCongener=true&r=br",
 		Path:     "/v1/airlines/search",
 	}
 	q := u.Query()
 	q.Add("departureDate", departureDate)
+	q.Add("cabin", cabinType)
 	q.Add("originAirportCode", originAirport)
 	q.Add("destinationAirportCode", destinationAirport)
 	u.RawQuery = q.Encode()
@@ -217,41 +219,47 @@ func getSmilesClubFare(f *model.Flight) *model.Fare {
 func validateParameters() {
 	originAirportCode = os.Args[1]
 	if len(originAirportCode) != 3 {
-		fmt.Fprintf(os.Stderr, "Error: El aeropuerto de origen %s no es válido\n", originAirportCode)
+		fmt.Fprintf(os.Stderr, "Erro: O aeroporto de origen %s não é válido\n", originAirportCode)
 		os.Exit(1)
 	}
 
 	destinationAirportCode = os.Args[2]
 	if len(destinationAirportCode) != 3 {
-		fmt.Fprintf(os.Stderr, "Error: El aeropuerto de destino %s no es válido\n", destinationAirportCode)
+		fmt.Fprintf(os.Stderr, "Erro: O aeroport de destino %s não é válido\n", destinationAirportCode)
 		os.Exit(1)
 	}
 
 	departureDateStr = os.Args[3]
 	_, err := time.Parse(dateLayout, departureDateStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: La fecha de salida %s no es válida. %v \n", departureDateStr, err)
+		fmt.Fprintf(os.Stderr, "Erro: A data de saída %s não é válida. %v \n", departureDateStr, err)
 		os.Exit(1)
 	}
 
 	returnDateStr = os.Args[4]
 	_, err = time.Parse(dateLayout, returnDateStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: La fecha de regreso %s no es válida. %v \n", returnDateStr, err)
+		fmt.Fprintf(os.Stderr, "Erro: A data de retorno %s não é válida. %v \n", returnDateStr, err)
 		os.Exit(1)
 	}
 
 	v, err := strconv.ParseInt(os.Args[5], 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: La cantidad de días %d no es válida. %v \n", v, err)
+		fmt.Fprintf(os.Stderr, "Erro: A quantidade de dias %d não é válida. %v \n", v, err)
 		os.Exit(1)
 	}
 
-	if v > 10 {
-		fmt.Fprintf(os.Stderr, "Error: La cantidad de días no puede ser mayor a 10 \n")
+	if v >= 15 {
+		fmt.Fprintf(os.Stderr, "Erro: A quantidade de dias não pode ser maior do que 15 \n")
 		os.Exit(1)
 	}
 	daysToQuery = int(v)
+
+	cabinType = os.Args[6]
+	if cabinType != "ECONOMY" && cabinType != "BUSINESS" {
+		fmt.Fprintf(os.Stderr, "Erro: A classe de cabine %s não é válida. \nRealizando busca para todos os tipos de cabine.", cabinType)
+		cabinType = "all"
+	}
 }
 
 func processResults(c *http.Client, r []model.Result) {
@@ -283,7 +291,7 @@ func processResults(c *http.Client, r []model.Result) {
 		}
 
 		if cheapestFareDay.Miles != bigMaxMilesNumber {
-			fmt.Printf("Vuelo más barato del día %s: %s - %s, %s, %s, %d escalas, %d millas\n",
+			fmt.Printf("Vôo mais barato do dia %s: %s - %s, %s, %s, %d escalas, %d milhas\n",
 				cheapestFlightDay.Departure.Date.Format(dateLayout),
 				cheapestFlightDay.Departure.Airport.Code,
 				cheapestFlightDay.Arrival.Airport.Code,
@@ -299,7 +307,7 @@ func processResults(c *http.Client, r []model.Result) {
 	if cheapestFare.Miles != bigMaxMilesNumber {
 		boardingTax := getTaxForFlight(c, cheapestFlight, cheapestFare)
 
-		fmt.Printf("Vuelo más barato en estas fechas: %s, %s - %s, %s, %s, %d escalas, %d millas, %f de Tasas e impuestos\n",
+		fmt.Printf("Vôos mais barato nas datas: %s, %s - %s, %s, %s, %d escalas, %d milhas, %f de Taxas e impostos\n",
 			cheapestFlight.Departure.Date.Format(dateLayout),
 			cheapestFlight.Departure.Airport.Code,
 			cheapestFlight.Arrival.Airport.Code,
