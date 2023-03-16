@@ -178,10 +178,13 @@ func createURL(departureDate string, originAirport string, destinationAirport st
 	u := url.URL{
 		Scheme:   "https",
 		Host:     "api-air-flightsearch-prd.smiles.com.br",
-		RawQuery: "adults=1&children=0&currencyCode=BRL&infants=0&isFlexibleDateChecked=false&tripType=2&forceCongener=true&r=br",
+		RawQuery: "adults=1&children=0&currencyCode=BRL&infants=0&isFlexibleDateChecked=false&forceCongener=true&r=br",
 		Path:     "/v1/airlines/search",
 	}
 	q := u.Query()
+	q.Add("tripType", "2")
+	q.Add()
+
 	q.Add("departureDate", departureDate)
 	q.Add("cabin", cabinType)
 	q.Add("originAirportCode", originAirport)
@@ -334,6 +337,9 @@ func getTaxForFlight(c *http.Client, flight *model.Flight, fare *model.Fare) *mo
 	}
 
 	body, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal("Error reading response ", err)
+	}
 	if body == nil {
 		log.Fatal("Empty result")
 	}

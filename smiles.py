@@ -4,6 +4,7 @@ import argparse
 import datetime
 from tqdm import tqdm
 from prettytable import PrettyTable
+import concurrent.futures
 
 parser = argparse.ArgumentParser()
 
@@ -46,16 +47,25 @@ print ("Origin: %s" % args.origin)
 print ("Destination: %s" % args.destination)
 print ("Mile value: %s" % args.mile_value)
 
-print ("Retrieving flights...")
-for param in tqdm(all_params):
-    response = requests.get(config["url"], headers=config["headers"], params=param).text
-    responses.append(response)
+print("Retrieving flights...")
 
-#dump responses to file
-with open('data/responses.json', 'w') as f:
-    json.dump(responses, f)
-with open('data/responses.json', 'r') as f:
-    responses = json.load(f)
+# Define a function to send a request and return the response
+def send_request(param):
+    return requests.get(config["url"], headers=config["headers"], params=param).text
+
+# Create a thread pool with a maximum of 10 workers
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    # Submit each request to the executor and store the futures
+    futures = [executor.submit(send_request, param) for param in all_params]
+    # Iterate over the futures as they are completed and store the results
+    for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+        responses.append(future.result())
+
+# #dump responses to file
+# with open('data/responses.json', 'w') as f:
+#     json.dump(responses, f)
+# with open('data/responses.json', 'r') as f:
+#     responses = json.load(f)
 
 best_fares = {}
 
@@ -76,7 +86,7 @@ for response in responses:
             best_fare_type = ""
             for fare in flight["fareList"]:
                 fare_type = fare["type"]
-                fare_value = fare["money"] + (fare["miles"] * 0.0175) + fare["airlineTax"]                
+                fare_value = fare["money"] + (fare["miles"] * args.mile_value) + fare["airlineTax"]                
                 #print ("Fare Type: %s, Fare Value: %s" % (fare_type, fare_value))
                 if best_fares[date][cabin] == {} or fare_value < best_fares[date][cabin]["total_value"]:
                     best_fares[date][cabin] = {"fare_type": fare_type, "total_value": fare_value, "airline": airline}
@@ -96,3 +106,7 @@ table.float_format = ".2"
 table.reversesort = False
 
 print(table)
+
+# save table to file dated and with the origin and destination airports as name
+with open('data/%s_%s_%s_%s.txt' % (args.origin, args.destination, args.date, args.days), 'w') as f:
+    f.write(table.get_string())
