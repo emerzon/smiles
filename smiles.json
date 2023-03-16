@@ -1,0 +1,26 @@
+{
+    "url": "https://api-air-flightsearch-prd.smiles.com.br/v1/airlines/search",
+    "url_params": {
+        "adults": "1",
+        "cabin": "all",
+        "children": "0",
+        "currencyCode": "BRL",
+        "departureDate": "2023-07-12",
+        "destinationAirportCode": "GRU",
+        "forceCongener": "true",
+        "infants": "0",
+        "isFlexibleDateChecked": "false",
+        "originAirportCode": "AUS",
+        "r": "br",
+        "tripType": "2"
+    },
+    "headers": {
+        "x-api-key": "aJqPU7xNHl9qN3NVZnPaJ208aPo2Bh2p2ZV844tw",
+        "region": "BRASIL",
+        "origin": "https://www.smiles.com.br",
+        "referer": "https://www.smiles.com.br",
+        "channel": "WEB",
+        "authority": "api-air-flightsearch-prd.smiles.com.br"
+    },
+    "mile_value": 0.0175
+}
