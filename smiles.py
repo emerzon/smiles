@@ -16,7 +16,8 @@ parser.add_argument('date', type=str,
 parser.add_argument('-d', '--days', type=int, default=10,
                      help="Number of days to search for after the initial departure date")
 parser.add_argument('--mile_value', type=float,
-                    default=0.0175, help="Value of a mile in BRL")
+                    default=0.0210, help="Value of a mile in BRL")
+parser.add_argument('--adults', type=int, default=1)
 
 args = parser.parse_args()
 
@@ -27,6 +28,7 @@ with open('smiles.json', 'r') as f:
 params = config["url_params"]
 params["destinationAirportCode"] = args.destination
 params["originAirportCode"] = args.origin
+params["adults"] = args.adults
 
 all_dates = [args.date]
 for i in range(1, args.days):
@@ -46,6 +48,7 @@ print ("Number of days to search: %s" % args.days)
 print ("Origin: %s" % args.origin)
 print ("Destination: %s" % args.destination)
 print ("Mile value: %s" % args.mile_value)
+print ("Number of adults: %s" % args.adults)
 
 print("Retrieving flights...")
 
@@ -70,8 +73,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
 best_fares = {}
 
 for response in responses:
-    dct = json.loads(response)["requestedFlightSegmentList"][0]
-    if dct["flightList"]:
+    response = json.loads(response)
+    dct = response.get("requestedFlightSegmentList", [{}])[0]
+    if "flightList" in dct:
         for flight in dct["flightList"]:
             date = flight["departure"]["date"].split("T")[0]
             time = flight["departure"]["date"].split("T")[1]
@@ -101,6 +105,7 @@ for date, classes in best_fares.items():
         airline = values['airline']
         table.add_row([date, cabin, fare_type, total_value, airline])
 
+# sort table by total value and cabin
 table.sortby = "Total Value"
 table.float_format = ".2"
 table.reversesort = False
