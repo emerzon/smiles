@@ -64,11 +64,11 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
     for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
         responses.append(future.result())
 
-# #dump responses to file
-# with open('data/responses.json', 'w') as f:
-#     json.dump(responses, f)
-# with open('data/responses.json', 'r') as f:
-#     responses = json.load(f)
+#dump responses to file
+with open('data/responses.json', 'w') as f:
+    json.dump(responses, f)
+#with open('data/responses.json', 'r') as f:
+#    responses = json.load(f)
 
 best_fares = {}
 
@@ -112,6 +112,13 @@ table.reversesort = False
 
 print(table)
 
-# save table to file dated and with the origin and destination airports as name
-with open('data/%s_%s_%s_%s.txt' % (args.origin, args.destination, args.date, args.days), 'w') as f:
-    f.write(table.get_string())
+# Save the table as a HTML page, with sorting enabled on columns
+with open('flightsearch/%s_%s_%s_%s.html' % (args.origin, args.destination, args.date, args.days), 'w') as f:
+    # Add the header.html file to the top of the page
+    with open('header.html', 'r') as header:
+        f.write(header.read())
+    f.write(table.get_html_string(attributes={"name":"BUGA", "class":"sortable_table"}, sortby="Total Value", reversesort=False))
+    
+    # Generate the footer, adding the current date and time
+    with open('footer.html', 'r') as footer:
+        f.write(footer.read().replace("{{date}}", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
