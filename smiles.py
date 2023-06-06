@@ -117,7 +117,7 @@ with open('flightsearch/%s_%s_%s_%s.html' % (args.origin, args.destination, args
     # Add the header.html file to the top of the page
     with open('header.html', 'r') as header:
         f.write(header.read())
-    f.write(table.get_html_string(attributes={"name":"BUGA", "class":"sortable_table"}, sortby="Total Value", reversesort=False))
+    f.write(table.get_html_string(attributes={"name":"BUGA", "class":"sortable-table"}, sortby="Total Value", reversesort=False))
     
     # Generate the footer, adding the current date and time
     with open('footer.html', 'r') as footer:
